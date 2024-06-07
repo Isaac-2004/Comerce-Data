@@ -1,0 +1,762 @@
+import javax.swing.*;
+import javax.swing.table.DefaultTableCellRenderer;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
+import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.sql.*;
+
+public class FormularioClientes {
+    private JTextField nombre1Field;
+    private JTextField nombre2Field;
+    private JTextField apellido1Field;
+    private JTextField apellido2Field;
+    private JTextField identificacionField;
+    private JTextField direccionField;
+    private JTextField telefonoField;
+    private JTextField celularField;
+    private JTextField emailField;
+    private JComboBox<String> tipoComboBox;
+    private JComboBox<String> statusComboBox;
+    private JLabel imagenLabel;
+    private File imagenFile;
+    private Integer currentClientId = null; // Variable para almacenar el ID del cliente actual
+
+    private final Dimension textFieldSize = new Dimension(200, 30);
+    private final Font textFieldFont = new Font("Arial", Font.PLAIN, 14);
+
+    public FormularioClientes() {
+        JFrame frame = new JFrame("Datos del Cliente - Editar datos");
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setSize(500, 700);
+        frame.setLocationRelativeTo(null);
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBackground(new Color(240, 248, 255));
+
+        JPanel titlePanel = new JPanel(new BorderLayout());
+        titlePanel.setBackground(new Color(70, 130, 180));
+        JLabel titleLabel = new JLabel("DATOS DEL CLIENTE", JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        titleLabel.setForeground(Color.WHITE);
+        titlePanel.add(titleLabel, BorderLayout.CENTER);
+
+        JButton verClientesButton = new JButton("Ver Clientes");
+        verClientesButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                verClientes();
+            }
+        });
+        titlePanel.add(verClientesButton, BorderLayout.WEST);
+
+        mainPanel.add(titlePanel, BorderLayout.NORTH);
+
+        JPanel panel = new JPanel(new GridLayout(15, 2, 10, 10)); // Se cambió de 14 a 15 para agregar un nuevo botón
+        panel.setBackground(new Color(240, 248, 255));
+        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+        panel.add(new JLabel("Primer Nombre:"));
+        nombre1Field = new JTextField();
+        nombre1Field.setPreferredSize(textFieldSize);
+        nombre1Field.setFont(textFieldFont);
+        panel.add(nombre1Field);
+
+        panel.add(new JLabel("Segundo Nombre:"));
+        nombre2Field = new JTextField();
+        nombre2Field.setPreferredSize(textFieldSize);
+        nombre2Field.setFont(textFieldFont);
+        panel.add(nombre2Field);
+
+        panel.add(new JLabel("Primer Apellido:"));
+        apellido1Field = new JTextField();
+        apellido1Field.setPreferredSize(textFieldSize);
+        apellido1Field.setFont(textFieldFont);
+        panel.add(apellido1Field);
+
+        panel.add(new JLabel("Segundo Apellido:"));
+        apellido2Field = new JTextField();
+        apellido2Field.setPreferredSize(textFieldSize);
+        apellido2Field.setFont(textFieldFont);
+        panel.add(apellido2Field);
+
+        panel.add(new JLabel("Identificación:"));
+        identificacionField = new JTextField();
+        identificacionField.setPreferredSize(textFieldSize);
+        identificacionField.setFont(textFieldFont);
+        JPanel identificacionPanel = new JPanel(new BorderLayout());
+        identificacionPanel.add(identificacionField, BorderLayout.CENTER);
+        JButton buscarButton = new JButton("Buscar");
+        buscarButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                buscarCliente();
+            }
+        });
+        identificacionPanel.add(buscarButton, BorderLayout.EAST);
+        panel.add(identificacionPanel);
+
+        panel.add(new JLabel("Dirección:"));
+        direccionField = new JTextField();
+        direccionField.setPreferredSize(textFieldSize);
+        direccionField.setFont(textFieldFont);
+        panel.add(direccionField);
+
+        panel.add(new JLabel("Teléfono:"));
+        telefonoField = new JTextField();
+        telefonoField.setPreferredSize(textFieldSize);
+        telefonoField.setFont(textFieldFont);
+        panel.add(telefonoField);
+
+        panel.add(new JLabel("Celular:"));
+        celularField = new JTextField();
+        celularField.setPreferredSize(textFieldSize);
+        celularField.setFont(textFieldFont);
+        panel.add(celularField);
+
+        panel.add(new JLabel("Email:"));
+        emailField = new JTextField();
+        emailField.setPreferredSize(textFieldSize);
+        emailField.setFont(textFieldFont);
+        panel.add(emailField);
+
+        panel.add(new JLabel("Tipo:"));
+        tipoComboBox = new JComboBox<>(new String[]{"VIP", "NOR", "EMP"});
+        tipoComboBox.setPreferredSize(textFieldSize);
+        tipoComboBox.setFont(textFieldFont);
+        panel.add(tipoComboBox);
+
+        panel.add(new JLabel("Status:"));
+        statusComboBox = new JComboBox<>(new String[]{"ACT", "INA"});
+        statusComboBox.setPreferredSize(textFieldSize);
+        statusComboBox.setFont(textFieldFont);
+        panel.add(statusComboBox);
+
+        JButton cargarImagenButton = new JButton("Cargar Imagen");
+        cargarImagenButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                cargarImagen();
+            }
+        });
+        panel.add(cargarImagenButton);
+
+        imagenLabel = new JLabel();
+        panel.add(imagenLabel);
+
+        JButton guardarButton = new JButton("Guardar");
+        guardarButton.setBackground(new Color(34, 139, 34)); // Verde oscuro
+        guardarButton.setForeground(Color.WHITE);
+        guardarButton.setFont(new Font("Arial", Font.BOLD, 14));
+        guardarButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                guardarDatos(null); // Para insertar un nuevo registro
+            }
+        });
+        panel.add(guardarButton);
+
+        JButton editarButton = new JButton("Editar");
+        editarButton.setBackground(new Color(255, 140, 0)); // Naranja oscuro
+        editarButton.setForeground(Color.WHITE);
+        editarButton.setFont(new Font("Arial", Font.BOLD, 14));
+        editarButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (currentClientId != null) {
+                    guardarDatos(currentClientId); // Para editar el registro actual
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Por favor, busque un cliente para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        });
+        panel.add(editarButton);
+
+        JButton cancelarButton = new JButton("Cancelar");
+        cancelarButton.setBackground(new Color(178, 34, 34)); // Rojo oscuro
+        cancelarButton.setForeground(Color.WHITE);
+        cancelarButton.setFont(new Font("Arial", Font.BOLD, 14));
+        cancelarButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                System.exit(0);
+            }
+        });
+        panel.add(cancelarButton);
+
+        mainPanel.add(panel, BorderLayout.CENTER);
+
+        frame.add(mainPanel);
+        frame.setVisible(true);
+    }
+
+    private void cargarImagen() {
+        JFileChooser fileChooser = new JFileChooser();
+        int result = fileChooser.showOpenDialog(null);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            imagenFile = fileChooser.getSelectedFile();
+            imagenLabel.setText(imagenFile.getName());
+
+            // Previsualizar la imagen seleccionada
+            ImageIcon icon = new ImageIcon(imagenFile.getAbsolutePath());
+            Image image = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+            imagenLabel.setIcon(new ImageIcon(image));
+        }
+    }
+
+    private void buscarCliente() {
+        String identificacion = identificacionField.getText();
+        if (identificacion.isEmpty()) {
+            JOptionPane.showMessageDialog(null, "Por favor, ingrese un número de identificación.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3307/prueba", "root", "Puce1324")) {
+            String sql = "SELECT * FROM CLIENTES WHERE CLIIDENTIFICACION = ?";
+            PreparedStatement statement = conn.prepareStatement(sql);
+            statement.setString(1, identificacion);
+            ResultSet resultSet = statement.executeQuery();
+
+            if (resultSet.next()) {
+                currentClientId = resultSet.getInt("CLICODIGO");
+                nombre1Field.setText(resultSet.getString("CliNOMBRE1"));
+                nombre2Field.setText(resultSet.getString("CLINOMBRE2"));
+                apellido1Field.setText(resultSet.getString("CliAPELLIDO1"));
+                apellido2Field.setText(resultSet.getString("CliAPELLIDO2"));
+                direccionField.setText(resultSet.getString("CLIDIRECCION"));
+                telefonoField.setText(resultSet.getString("CLITELEFONO"));
+                celularField.setText(resultSet.getString("CLICELULAR"));
+                emailField.setText(resultSet.getString("CLIEMAIL"));
+                tipoComboBox.setSelectedItem(resultSet.getString("CLITIPO"));
+                statusComboBox.setSelectedItem(resultSet.getString("CLISTATUS"));
+
+                byte[] imagenBytes = resultSet.getBytes("CLIIMAGEN");
+                if (imagenBytes != null) {
+                    Image img = Toolkit.getDefaultToolkit().createImage(imagenBytes);
+                    img = img.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                    imagenLabel.setIcon(new ImageIcon(img));
+                } else {
+                    imagenLabel.setIcon(null);
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Cliente no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al buscar el cliente: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void guardarDatos(Integer clicodigo) {
+        String nombre1 = nombre1Field.getText();
+        String nombre2 = nombre2Field.getText();
+        String apellido1 = apellido1Field.getText();
+        String apellido2 = apellido2Field.getText();
+        String identificacion = identificacionField.getText();
+        String direccion = direccionField.getText();
+        String telefono = telefonoField.getText();
+        String celular = celularField.getText();
+        String email = emailField.getText();
+        String tipo = (String) tipoComboBox.getSelectedItem();
+        String status = (String) statusComboBox.getSelectedItem();
+
+        System.out.println("Email ingresado: " + email); // Mensaje de depuración
+
+        // Validación de campos requeridos
+        if (nombre1.isEmpty() || apellido1.isEmpty() || identificacion.isEmpty() || direccion.isEmpty() || telefono.isEmpty() || celular.isEmpty() || tipo == null || status == null) {
+            JOptionPane.showMessageDialog(null, "Por favor, complete todos los campos requeridos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Validación de CLITELEFONO y CLICELULAR
+        if (!telefono.matches("\\d{9}")) {
+            JOptionPane.showMessageDialog(null, "El teléfono debe tener exactamente 9 dígitos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+        if (!celular.matches("\\d{10}")) {
+            JOptionPane.showMessageDialog(null, "El celular debe tener exactamente 10 dígitos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Validación de CLIEMAIL
+        if (!email.isEmpty() && !email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+            JOptionPane.showMessageDialog(null, "El email no tiene un formato válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Generar CLINOMBRE
+        String clinombre = String.format("%s %s %s %s", nombre1, nombre2, apellido1, apellido2).trim().replaceAll(" +", " ");
+
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3307/prueba", "root", "Puce1324")) {
+            String sql;
+            PreparedStatement statement;
+
+            if (clicodigo == null) {
+                // Insertar nuevo registro
+                sql = "INSERT INTO CLIENTES (CliNOMBRE1, CLINOMBRE2, CliAPELLIDO1, CliAPELLIDO2, CLINOMBRE, CLIIDENTIFICACION, CLIDIRECCION, CLITELEFONO, CLICELULAR, CLIEMAIL, CLITIPO, CLISTATUS, CLIIMAGEN) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                statement = conn.prepareStatement(sql);
+            } else {
+                // Actualizar registro existente
+                sql = "UPDATE CLIENTES SET CliNOMBRE1 = ?, CLINOMBRE2 = ?, CliAPELLIDO1 = ?, CliAPELLIDO2 = ?, CLINOMBRE = ?, CLIIDENTIFICACION = ?, CLIDIRECCION = ?, CLITELEFONO = ?, CLICELULAR = ?, CLIEMAIL = ?, CLITIPO = ?, CLISTATUS = ?, CLIIMAGEN = ? WHERE CLICODIGO = ?";
+                statement = conn.prepareStatement(sql);
+                statement.setInt(14, clicodigo);
+            }
+
+            statement.setString(1, nombre1);
+            statement.setString(2, nombre2);
+            statement.setString(3, apellido1);
+            statement.setString(4, apellido2);
+            statement.setString(5, clinombre);
+            statement.setString(6, identificacion);
+            statement.setString(7, direccion);
+            statement.setString(8, telefono);
+            statement.setString(9, celular);
+            statement.setString(10, email);
+            statement.setString(11, tipo);
+            statement.setString(12, status);
+
+            if (imagenFile != null) {
+                FileInputStream fis = new FileInputStream(imagenFile);
+                statement.setBinaryStream(13, fis, (int) imagenFile.length());
+            } else {
+                statement.setNull(13, Types.BLOB);
+            }
+
+            int rowsAffected = statement.executeUpdate();
+            if (rowsAffected > 0) {
+                JOptionPane.showMessageDialog(null, "Datos guardados exitosamente.");
+            }
+        } catch (SQLException | IOException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al guardar los datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    private void verClientes() {
+        JFrame frame = new JFrame("Lista de Clientes");
+        frame.setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        frame.setSize(1000, 600);
+
+        JLabel titleLabel = new JLabel("LISTA DE CLIENTES", JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        titleLabel.setOpaque(true);
+        titleLabel.setBackground(new Color(70, 130, 180));  // Color azul
+        titleLabel.setForeground(Color.WHITE);
+        frame.add(titleLabel, BorderLayout.NORTH);
+
+        JPanel searchPanel = new JPanel();
+        searchPanel.setLayout(new FlowLayout());
+        JLabel searchLabel = new JLabel("Identificación:");
+        JTextField searchField = new JTextField(20);
+        JButton searchButton = new JButton("Buscar");
+
+        searchPanel.add(searchLabel);
+        searchPanel.add(searchField);
+        searchPanel.add(searchButton);
+        frame.add(searchPanel, BorderLayout.SOUTH);
+
+        String[] columnNames = {"CLICODIGO", "CLINOMBRE", "CLIIDENTIFICACION", "CLIDIRECCION", "CLITELEFONO", "CLICELULAR", "CLIEMAIL", "CLITIPO", "CLISTATUS", "IMAGEN"};
+        DefaultTableModel model = new DefaultTableModel(columnNames, 0);
+        JTable table = new JTable(model) {
+            @Override
+            public Class<?> getColumnClass(int column) {
+                if (column == 9) { // La columna de imágenes es la última
+                    return ImageIcon.class;
+                }
+                return super.getColumnClass(column);
+            }
+        };
+
+        // Ajustar el tamaño de la columna CLICODIGO
+        TableColumn columnaCodigo = table.getColumnModel().getColumn(0);
+        columnaCodigo.setPreferredWidth(50);
+
+        // Quitar líneas de separación
+        table.setShowGrid(false);
+        table.setIntercellSpacing(new Dimension(0, 0));
+
+        // Cambiar altura de las filas para mejor visualización de la imagen
+        table.setRowHeight(100);
+
+        // Colorear alternadamente las filas
+        table.setDefaultRenderer(Object.class, new DefaultTableCellRenderer() {
+            @Override
+            public Component getTableCellRendererComponent(JTable table, Object value, boolean isSelected, boolean hasFocus, int row, int column) {
+                Component c = super.getTableCellRendererComponent(table, value, isSelected, hasFocus, row, column);
+                if (!isSelected) {
+                    c.setBackground(row % 2 == 0 ? new Color(240, 248, 255) : Color.WHITE); // Alternar colores
+                }
+                return c;
+            }
+        });
+
+        JScrollPane scrollPane = new JScrollPane(table);
+        frame.add(scrollPane, BorderLayout.CENTER);
+
+        searchButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String identificacion = searchField.getText();
+                if (identificacion.isEmpty()) {
+                    JOptionPane.showMessageDialog(frame, "Por favor, ingrese un número de identificación.", "Error", JOptionPane.ERROR_MESSAGE);
+                    return;
+                }
+
+                model.setRowCount(0); // Limpiar la tabla antes de mostrar los resultados
+
+                try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3307/prueba", "root", "Puce1324")) {
+                    String sql = "SELECT CLICODIGO, CLINOMBRE, CLIIDENTIFICACION, CLIDIRECCION, CLITELEFONO, CLICELULAR, CLIEMAIL, CLITIPO, CLISTATUS, CLIIMAGEN FROM CLIENTES WHERE CLIIDENTIFICACION = ?";
+                    PreparedStatement statement = conn.prepareStatement(sql);
+                    statement.setString(1, identificacion);
+                    ResultSet resultSet = statement.executeQuery();
+
+                    if (resultSet.next()) {
+                        int clicodigo = resultSet.getInt("CLICODIGO");
+                        String clinombre = resultSet.getString("CLINOMBRE");
+                        String cliidentificacion = resultSet.getString("CLIIDENTIFICACION");
+                        String clidireccion = resultSet.getString("CLIDIRECCION");
+                        String clitelefono = resultSet.getString("CLITELEFONO");
+                        String clicelular = resultSet.getString("CLICELULAR");
+                        String cliemail = resultSet.getString("CLIEMAIL");
+                        String clitipo = resultSet.getString("CLITIPO");
+                        String clistatus = resultSet.getString("CLISTATUS");
+
+                        // Leer la imagen desde la base de datos
+                        byte[] imagenBytes = resultSet.getBytes("CLIIMAGEN");
+                        ImageIcon imagenIcon = null;
+                        if (imagenBytes != null) {
+                            Image img = Toolkit.getDefaultToolkit().createImage(imagenBytes);
+                            img = img.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                            imagenIcon = new ImageIcon(img);
+                        }
+
+                        Object[] row = {clicodigo, clinombre, cliidentificacion, clidireccion, clitelefono, clicelular, cliemail, clitipo, clistatus, imagenIcon};
+                        model.addRow(row);
+                    } else {
+                        JOptionPane.showMessageDialog(frame, "Cliente no encontrado.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                    JOptionPane.showMessageDialog(frame, "Error al buscar el cliente: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                }
+            }
+        });
+
+        JPanel buttonPanel = new JPanel();
+        JButton deleteButton = new JButton("Eliminar Cliente");
+        deleteButton.setBackground(new Color(178, 34, 34)); // Rojo oscuro
+        deleteButton.setForeground(Color.WHITE);
+        deleteButton.setFont(new Font("Arial", Font.BOLD, 14));
+        deleteButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    int confirm = JOptionPane.showConfirmDialog(frame, "¿Está seguro de que desea eliminar este cliente?", "Confirmar eliminación", JOptionPane.YES_NO_OPTION);
+                    if (confirm == JOptionPane.YES_OPTION) {
+                        int clicodigo = (int) table.getValueAt(selectedRow, 0);
+                        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3307/prueba", "root", "Puce1324")) {
+                            String sql = "DELETE FROM CLIENTES WHERE CLICODIGO = ?";
+                            PreparedStatement statement = conn.prepareStatement(sql);
+                            statement.setInt(1, clicodigo);
+                            int rowsDeleted = statement.executeUpdate();
+                            if (rowsDeleted > 0) {
+                                JOptionPane.showMessageDialog(frame, "Cliente eliminado exitosamente.");
+                                model.removeRow(selectedRow);
+                            }
+                        } catch (SQLException ex) {
+                            ex.printStackTrace();
+                            JOptionPane.showMessageDialog(frame, "Error al eliminar el cliente: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                        }
+                    }
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Por favor, seleccione un cliente para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        });
+
+        JButton editButton = new JButton("Editar Cliente");
+        editButton.setBackground(new Color(34, 139, 34)); // Verde oscuro
+        editButton.setForeground(Color.WHITE);
+        editButton.setFont(new Font("Arial", Font.BOLD, 14));
+        editButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                int selectedRow = table.getSelectedRow();
+                if (selectedRow >= 0) {
+                    int clicodigo = (int) table.getValueAt(selectedRow, 0);
+                    String clinombre = (String) table.getValueAt(selectedRow, 1);
+                    String cliidentificacion = (String) table.getValueAt(selectedRow, 2);
+                    String clidireccion = (String) table.getValueAt(selectedRow, 3);
+                    String clitelefono = (String) table.getValueAt(selectedRow, 4);
+                    String clicelular = (String) table.getValueAt(selectedRow, 5);
+                    String cliemail = (String) table.getValueAt(selectedRow, 6);
+                    String clitipo = (String) table.getValueAt(selectedRow, 7);
+                    String clistatus = (String) table.getValueAt(selectedRow, 8);
+                    ImageIcon imagenIcon = (ImageIcon) table.getValueAt(selectedRow, 9);
+
+                    JFrame editFrame = new JFrame("Editar Cliente");
+                    editFrame.setSize(400, 600);
+                    editFrame.setLocationRelativeTo(null);
+
+                    JPanel editPanel = new JPanel(new GridLayout(14, 2, 10, 10));
+                    editPanel.setBackground(new Color(240, 248, 255));
+                    editPanel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+
+                    JTextField nombre1Field = new JTextField(clinombre.split(" ")[0]);
+                    nombre1Field.setPreferredSize(textFieldSize);
+                    nombre1Field.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Primer Nombre:"));
+                    editPanel.add(nombre1Field);
+
+                    JTextField nombre2Field = new JTextField(clinombre.split(" ").length > 1 ? clinombre.split(" ")[1] : "");
+                    nombre2Field.setPreferredSize(textFieldSize);
+                    nombre2Field.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Segundo Nombre:"));
+                    editPanel.add(nombre2Field);
+
+                    JTextField apellido1Field = new JTextField(clinombre.split(" ").length > 2 ? clinombre.split(" ")[2] : "");
+                    apellido1Field.setPreferredSize(textFieldSize);
+                    apellido1Field.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Primer Apellido:"));
+                    editPanel.add(apellido1Field);
+
+                    JTextField apellido2Field = new JTextField(clinombre.split(" ").length > 3 ? clinombre.split(" ")[3] : "");
+                    apellido2Field.setPreferredSize(textFieldSize);
+                    apellido2Field.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Segundo Apellido:"));
+                    editPanel.add(apellido2Field);
+
+                    JTextField identificacionField = new JTextField(cliidentificacion);
+                    identificacionField.setPreferredSize(textFieldSize);
+                    identificacionField.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Identificación:"));
+                    editPanel.add(identificacionField);
+
+                    JTextField direccionField = new JTextField(clidireccion);
+                    direccionField.setPreferredSize(textFieldSize);
+                    direccionField.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Dirección:"));
+                    editPanel.add(direccionField);
+
+                    JTextField telefonoField = new JTextField(clitelefono);
+                    telefonoField.setPreferredSize(textFieldSize);
+                    telefonoField.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Teléfono:"));
+                    editPanel.add(telefonoField);
+
+                    JTextField celularField = new JTextField(clicelular);
+                    celularField.setPreferredSize(textFieldSize);
+                    celularField.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Celular:"));
+                    editPanel.add(celularField);
+
+                    JTextField emailField = new JTextField(cliemail);
+                    emailField.setPreferredSize(textFieldSize);
+                    emailField.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Email:"));
+                    editPanel.add(emailField);
+
+                    JComboBox<String> tipoComboBox = new JComboBox<>(new String[]{"VIP", "NOR", "EMP"});
+                    tipoComboBox.setSelectedItem(clitipo);
+                    tipoComboBox.setPreferredSize(textFieldSize);
+                    tipoComboBox.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Tipo:"));
+                    editPanel.add(tipoComboBox);
+
+                    JComboBox<String> statusComboBox = new JComboBox<>(new String[]{"ACT", "INA"});
+                    statusComboBox.setSelectedItem(clistatus);
+                    statusComboBox.setPreferredSize(textFieldSize);
+                    statusComboBox.setFont(textFieldFont);
+                    editPanel.add(new JLabel("Status:"));
+                    editPanel.add(statusComboBox);
+
+                    JLabel imagenLabel = new JLabel();
+                    if (imagenIcon != null) {
+                        imagenLabel.setIcon(imagenIcon);
+                    }
+                    editPanel.add(new JLabel("Imagen:"));
+                    editPanel.add(imagenLabel);
+
+                    JButton cargarImagenButton = new JButton("Cargar Imagen");
+                    cargarImagenButton.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            JFileChooser fileChooser = new JFileChooser();
+                            int result = fileChooser.showOpenDialog(null);
+                            if (result == JFileChooser.APPROVE_OPTION) {
+                                imagenFile = fileChooser.getSelectedFile();
+                                imagenLabel.setText(imagenFile.getName());
+
+                                // Previsualizar la imagen seleccionada
+                                ImageIcon icon = new ImageIcon(imagenFile.getAbsolutePath());
+                                Image image = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                                imagenLabel.setIcon(new ImageIcon(image));
+                            }
+                        }
+                    });
+                    editPanel.add(cargarImagenButton);
+
+                    JButton guardarButton = new JButton("Guardar");
+                    guardarButton.setBackground(new Color(34, 139, 34)); // Verde oscuro
+                    guardarButton.setForeground(Color.WHITE);
+                    guardarButton.setFont(new Font("Arial", Font.BOLD, 14));
+                    guardarButton.addActionListener(new ActionListener() {
+                        @Override
+                        public void actionPerformed(ActionEvent e) {
+                            String nombre1 = nombre1Field.getText();
+                            String nombre2 = nombre2Field.getText();
+                            String apellido1 = apellido1Field.getText();
+                            String apellido2 = apellido2Field.getText();
+                            String identificacion = identificacionField.getText();
+                            String direccion = direccionField.getText();
+                            String telefono = telefonoField.getText();
+                            String celular = celularField.getText();
+                            String email = emailField.getText();
+                            String tipo = (String) tipoComboBox.getSelectedItem();
+                            String status = (String) statusComboBox.getSelectedItem();
+
+                            System.out.println("Email ingresado: " + email); // Mensaje de depuración
+
+                            // Validación de campos requeridos
+                            if (nombre1.isEmpty() || apellido1.isEmpty() || identificacion.isEmpty() || direccion.isEmpty() || telefono.isEmpty() || celular.isEmpty() || tipo == null || status == null) {
+                                JOptionPane.showMessageDialog(editFrame, "Por favor, complete todos los campos requeridos.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+
+                            // Validación de CLITELEFONO y CLICELULAR
+                            if (!telefono.matches("\\d{9}")) {
+                                JOptionPane.showMessageDialog(editFrame, "El teléfono debe tener exactamente 9 dígitos.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+                            if (!celular.matches("\\d{10}")) {
+                                JOptionPane.showMessageDialog(editFrame, "El celular debe tener exactamente 10 dígitos.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+
+                            // Validación de CLIEMAIL
+                            if (!email.isEmpty() && !email.matches("^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$")) {
+                                JOptionPane.showMessageDialog(editFrame, "El email no tiene un formato válido.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                            }
+
+                            // Generar CLINOMBRE
+                            String clinombre = String.format("%s %s %s %s", nombre1, nombre2, apellido1, apellido2).trim().replaceAll(" +", " ");
+
+                            // Conexión a la base de datos y guardado de datos
+                            try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3307/prueba", "root", "Puce1324")) {
+                                String sql = "UPDATE CLIENTES SET CliNOMBRE1 = ?, CLINOMBRE2 = ?, CliAPELLIDO1 = ?, CliAPELLIDO2 = ?, CLINOMBRE = ?, CLIIDENTIFICACION = ?, CLIDIRECCION = ?, CLITELEFONO = ?, CLICELULAR = ?, CLIEMAIL = ?, CLITIPO = ?, CLISTATUS = ?, CLIIMAGEN = ? WHERE CLICODIGO = ?";
+                                PreparedStatement statement = conn.prepareStatement(sql);
+                                statement.setString(1, nombre1);
+                                statement.setString(2, nombre2);
+                                statement.setString(3, apellido1);
+                                statement.setString(4, apellido2);
+                                statement.setString(5, clinombre);
+                                statement.setString(6, identificacion);
+                                statement.setString(7, direccion);
+                                statement.setString(8, telefono);
+                                statement.setString(9, celular);
+                                statement.setString(10, email);
+                                statement.setString(11, tipo);
+                                statement.setString(12, status);
+                                if (imagenFile != null) {
+                                    FileInputStream fis = new FileInputStream(imagenFile);
+                                    statement.setBinaryStream(13, fis, (int) imagenFile.length());
+                                } else {
+                                    statement.setNull(13, Types.BLOB);
+                                }
+                                statement.setInt(14, clicodigo);
+
+                                int rowsUpdated = statement.executeUpdate();
+                                if (rowsUpdated > 0) {
+                                    JOptionPane.showMessageDialog(editFrame, "Datos actualizados exitosamente.");
+                                    table.setValueAt(clinombre, selectedRow, 1);
+                                    table.setValueAt(identificacion, selectedRow, 2);
+                                    table.setValueAt(direccion, selectedRow, 3);
+                                    table.setValueAt(telefono, selectedRow, 4);
+                                    table.setValueAt(celular, selectedRow, 5);
+                                    table.setValueAt(email, selectedRow, 6);
+                                    table.setValueAt(tipo, selectedRow, 7);
+                                    table.setValueAt(status, selectedRow, 8);
+                                    if (imagenFile != null) {
+                                        ImageIcon icon = new ImageIcon(imagenFile.getAbsolutePath());
+                                        Image image = icon.getImage().getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                                        table.setValueAt(new ImageIcon(image), selectedRow, 9);
+                                    }
+                                    editFrame.dispose();
+                                }
+                            } catch (SQLException | IOException ex) {
+                                ex.printStackTrace();
+                                JOptionPane.showMessageDialog(editFrame, "Error al actualizar los datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+                            }
+                        }
+                    });
+
+                    editPanel.add(guardarButton);
+                    editFrame.add(editPanel);
+                    editFrame.setVisible(true);
+                } else {
+                    JOptionPane.showMessageDialog(frame, "Por favor, seleccione un cliente para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+                }
+            }
+        });
+
+        buttonPanel.add(editButton);
+        buttonPanel.add(deleteButton);
+
+        frame.add(buttonPanel, BorderLayout.SOUTH);
+
+        // Cargar todos los clientes al iniciar la ventana
+        cargarTodosLosClientes(model);
+
+        frame.setVisible(true);
+    }
+
+    private void cargarTodosLosClientes(DefaultTableModel model) {
+        try (Connection conn = DriverManager.getConnection("jdbc:mysql://localhost:3307/prueba", "root", "Puce1324")) {
+            String sql = "SELECT CLICODIGO, CLINOMBRE, CLIIDENTIFICACION, CLIDIRECCION, CLITELEFONO, CLICELULAR, CLIEMAIL, CLITIPO, CLISTATUS, CLIIMAGEN FROM CLIENTES";
+            Statement statement = conn.createStatement();
+            ResultSet resultSet = statement.executeQuery(sql);
+
+            while (resultSet.next()) {
+                int clicodigo = resultSet.getInt("CLICODIGO");
+                String clinombre = resultSet.getString("CLINOMBRE");
+                String cliidentificacion = resultSet.getString("CLIIDENTIFICACION");
+                String clidireccion = resultSet.getString("CLIDIRECCION");
+                String clitelefono = resultSet.getString("CLITELEFONO");
+                String clicelular = resultSet.getString("CLICELULAR");
+                String cliemail = resultSet.getString("CLIEMAIL");
+                String clitipo = resultSet.getString("CLITIPO");
+                String clistatus = resultSet.getString("CLISTATUS");
+
+                // Leer la imagen desde la base de datos
+                byte[] imagenBytes = resultSet.getBytes("CLIIMAGEN");
+                ImageIcon imagenIcon = null;
+                if (imagenBytes != null) {
+                    Image img = Toolkit.getDefaultToolkit().createImage(imagenBytes);
+                    img = img.getScaledInstance(100, 100, Image.SCALE_SMOOTH);
+                    imagenIcon = new ImageIcon(img);
+                }
+
+                Object[] row = {clicodigo, clinombre, cliidentificacion, clidireccion, clitelefono, clicelular, cliemail, clitipo, clistatus, imagenIcon};
+                model.addRow(row);
+            }
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(null, "Error al recuperar los datos: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    public static void main(String[] args) {
+        SwingUtilities.invokeLater(new Runnable() {
+            @Override
+            public void run() {
+                new FormularioClientes();
+            }
+        });
+    }
+}
